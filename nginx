@@ -1,0 +1,31 @@
+/var/log/nginx/*.log {
+	weekly
+	missingok
+	rotate 1
+	compress
+	notifempty
+	create 0640 www-data adm
+	sharedscripts
+	prerotate
+		if [ -d /etc/logrotate.d/httpd-prerotate ]; then \
+			run-parts /etc/logrotate.d/httpd-prerotate; \
+		fi \
+	endscript
+	postrotate
+		invoke-rc.d nginx rotate >/dev/null 2>&1
+		current_time=$(date "+%Y%m%d%H%M%S")
+		if [ -f "access.log.1" ]; then
+                	aws s3 cp "/var/log/nginx/access.log.1" "s3://<bucketname>/access.log.$current_time"    
+                fi
+		if [ -f "access.log.1.gz" ]; then
+                        aws s3 cp "/var/log/nginx/access.log.1.gz" "s3://<bucketname>/access.log.$current_time.gz"   
+                fi
+		if [ -f "error.log.1" ]; then
+                        aws s3 cp "/var/log/nginx/error.log.1" "s3://<bucketname>/error.log.$current_time"
+                fi
+		if [ -f "error.log.1.gz" ]; then
+                        aws s3 cp "/var/log/nginx/error.log.1.gz" "s3://<bucketname>/error.log.$current_time.gz"
+                fi
+	endscript
+}
+
